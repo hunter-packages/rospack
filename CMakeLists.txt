@@ -1,16 +1,30 @@
 cmake_minimum_required(VERSION 2.8.3)
+
+include(cmake/HunterGate.cmake)
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.20.68.tar.gz"
+    SHA1 "8bbef873746f3e47595550751c052098aa8d202e"
+)
+
 project(rospack)
 
-find_package(catkin REQUIRED COMPONENTS cmake_modules)
-find_package(Boost REQUIRED COMPONENTS filesystem program_options system)
+hunter_add_package(catkin)
+hunter_add_package(Boost COMPONENTS filesystem program_options system)
+hunter_add_package(tinyxml2)
+
+find_package(catkin REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem program_options system)
 set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 find_package(PythonLibs "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}" REQUIRED)
-find_package(TinyXML2 REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
+set(Boost_LINK_TARGETS Boost::filesystem Boost::program_options Boost::system)
+set(TinyXML2_LIBRARIES "tinyxml2")
 
+set(PROJECT_INSTALLSPACE_LIBRARIES ros::rospack)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES rospack ${PYTHON_LIBRARIES}
-  DEPENDS Boost TinyXML2
+  DEPENDS "Boost COMPONENTS filesystem program_options system" tinyxml2
 )
 
 #add_definitions(-Wall)
@@ -29,28 +43,38 @@ add_library(rospack
   src/rospack_cmdline.cpp
   src/utils.cpp
 )
-target_link_libraries(rospack ${TinyXML2_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(rospack ${TinyXML2_LIBRARIES} ${Boost_LINK_TARGETS} ${PYTHON_LIBRARIES})
 
 add_executable(rospackexe src/rospack_main.cpp)
 # Set the name, and make it a "global" executable
 set_target_properties(rospackexe PROPERTIES
   OUTPUT_NAME rospack
   RUNTIME_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/bin)
-target_link_libraries(rospackexe rospack ${Boost_LIBRARIES})
+target_link_libraries(rospackexe rospack ${Boost_LINK_TARGETS})
 add_executable(rosstackexe src/rosstack_main.cpp)
-target_link_libraries(rosstackexe rospack ${Boost_LIBRARIES})
+target_link_libraries(rosstackexe rospack ${Boost_LINK_TARGETS})
 # Set the name, and make it a "global" executable
 set_target_properties(rosstackexe PROPERTIES
   OUTPUT_NAME rosstack
   RUNTIME_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/bin)
 
-install(TARGETS rospack rospackexe rosstackexe
+install(TARGETS rospack
+  EXPORT ${PROJECT_NAME}Targets
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+install(TARGETS rospackexe rosstackexe
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h")
+
+install(EXPORT ${PROJECT_NAME}Targets
+    DESTINATION share/${PROJECT_NAME}/cmake
+    NAMESPACE ros::
+)
 
 # uninstall target
 configure_file(
