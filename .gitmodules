@@ -1,4 +1,0 @@
-[submodule "submodules/catkin"]
-	path = submodules/catkin
-	url = https://github.com/kgeorgiev93/catkin
-	branch = hunter-0.7.17
